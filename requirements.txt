@@ -22,3 +22,6 @@ streamlit_pdf_viewer==0.0.21
 tiktoken==0.8.0
 torch==2.5.1+cu124
 transformers==4.44.2
+beautifulsoup4==4.12.3
+pypdf==5.4.0
+spacy==3.8.4
