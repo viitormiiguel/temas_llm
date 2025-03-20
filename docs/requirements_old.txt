@@ -1,0 +1,7 @@
+streamlit
+openai
+ython-dotenv==1.0.1
+langchain==0.2.7
+langchain-community==0.2.7
+langchain-openai==0.1.16
+faiss-cpu==1.8.0
