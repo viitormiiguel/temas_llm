@@ -131,7 +131,23 @@ if __name__ == '__main__':
             
         try:
                 
-            st.session_state.knowledge_base = extract_data()        
+            st.session_state.knowledge_base = extract_data()      
+            
+            if '.pdf' in uploaded_file[0]:                
+                ## Get PDF Content
+                retPDF = getContentPdf('uploaded/' + uploaded_file[0].name)
+            else:
+                retPDF = getContentAllHtml('uploaded/' + uploaded_file[0].name)
+            
+            retSimi = similarityTop(retPDF, 'distiluse-base-multilingual-cased-v2')
+            
+            retRag.append(retSimi)
+            
+            for rr in retRag[0]:
+                ragString += rr + '\n\n'            
+            
+            ## Remove files from uploaded folder
+            remove_files()  
             
         except UnicodeDecodeError:
             
@@ -139,21 +155,7 @@ if __name__ == '__main__':
             
             remove_files()
         
-        if '.pdf' in uploaded_file[0]:                
-            ## Get PDF Content
-            retPDF = getContentPdf('uploaded/' + uploaded_file[0].name)
-        else:
-            retPDF = getContentAllHtml('uploaded/' + uploaded_file[0].name)
-        
-        retSimi = similarityTop(retPDF, 'distiluse-base-multilingual-cased-v2')
-        
-        retRag.append(retSimi)
-        
-        for rr in retRag[0]:
-            ragString += rr + '\n\n'            
-        
-        ## Remove files from uploaded folder
-        remove_files()
+       
 
     question = st.text_area(
         label = "Pergunta algo sobre o documento enviado:",
