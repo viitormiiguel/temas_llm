@@ -19,4 +19,4 @@ COPY . .
 
 EXPOSE 8081
 
-ENTRYPOINT [ "streamlit", "run", "main.py" ]
+ENTRYPOINT [ "streamlit", "run", "main.py", "--server.port=8081", "--server.address=0.0.0.0"]
