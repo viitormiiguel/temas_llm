@@ -1,4 +1,4 @@
-
+# -*- coding: utf-8 -*-
 import os
 import sys
 import time
@@ -76,7 +76,7 @@ def extract_data():
             
         if '.html' in file:
                                  
-            loader = BSHTMLLoader(os.path.join('uploaded', file))
+            loader = BSHTMLLoader('uploaded/' + file)
                                                         
             text_chunks += loader.load_and_split(text_splitter=RecursiveCharacterTextSplitter(
                 chunk_size = 512,
