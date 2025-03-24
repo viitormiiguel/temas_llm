@@ -128,34 +128,25 @@ if __name__ == '__main__':
         
         for pdf in uploaded_file:
             save_uploadedfile(pdf)
-            
-        try:
-                
-            st.session_state.knowledge_base = extract_data()      
-            
-            if '.pdf' in uploaded_file[0]:                
-                ## Get PDF Content
-                retPDF = getContentPdf('uploaded/' + uploaded_file[0].name)
-            else:
-                retPDF = getContentAllHtml('uploaded/' + uploaded_file[0].name)
-            
-            retSimi = similarityTop(retPDF, 'distiluse-base-multilingual-cased-v2')
-            
-            retRag.append(retSimi)
-            
-            for rr in retRag[0]:
-                ragString += rr + '\n\n'            
-            
-            ## Remove files from uploaded folder
-            remove_files()  
-            
-        except UnicodeDecodeError:
-            
-            alert = st.warning("Realize o Upload de um arquivo Valido para executar uma pergunta!", icon="🚨")
-            
-            remove_files()
         
-       
+        ## Extrai dados e convert chunks em embeddings    
+        st.session_state.knowledge_base = extract_data()
+        
+        if '.pdf' in uploaded_file[0]:                
+            ## Get PDF Content
+            retPDF = getContentPdf('uploaded/' + uploaded_file[0].name)
+        else:
+            retPDF = getContentAllHtml('uploaded/' + uploaded_file[0].name)
+        
+        retSimi = similarityTop(retPDF, 'distiluse-base-multilingual-cased-v2')
+        
+        retRag.append(retSimi)
+        
+        for rr in retRag[0]:
+            ragString += rr + '\n\n'            
+        
+        ## Remove files from uploaded folder
+        remove_files()
 
     question = st.text_area(
         label = "Pergunta algo sobre o documento enviado:",
