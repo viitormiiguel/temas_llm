@@ -76,14 +76,16 @@ def extract_data():
             
         if '.html' in file:
                                  
-            loader = BSHTMLLoader(os.path.join('uploaded', file), open_encoding='utf-8')
-                                            
+            loader = BSHTMLLoader(os.path.join('uploaded', file))
+                                                        
             text_chunks += loader.load_and_split(text_splitter=RecursiveCharacterTextSplitter(
                 chunk_size = 512,
                 chunk_overlap = 30,
                 length_function = len,
                 separators= ["\n\n", "\n", ".", " "]
             ))
+            
+            print(text_chunks)
     
     vectorstore = FAISS.from_documents(documents=text_chunks, embedding=OpenAIEmbeddings())
     
@@ -126,8 +128,16 @@ if __name__ == '__main__':
         
         for pdf in uploaded_file:
             save_uploadedfile(pdf)
+            
+        try:
                 
-        st.session_state.knowledge_base = extract_data()        
+            st.session_state.knowledge_base = extract_data()        
+            
+        except UnicodeDecodeError:
+            
+            alert = st.warning("Realize o Upload de um arquivo Valido para executar uma pergunta!", icon="🚨")
+            
+            remove_files()
         
         if '.pdf' in uploaded_file[0]:                
             ## Get PDF Content
