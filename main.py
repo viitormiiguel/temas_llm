@@ -76,7 +76,7 @@ def extract_data():
             
         if '.html' in file:
                                  
-            loader = BSHTMLLoader(os.path.join('uploaded', file))
+            loader = BSHTMLLoader(os.path.join('uploaded', file), open_encoding='utf-8')
                                             
             text_chunks += loader.load_and_split(text_splitter=RecursiveCharacterTextSplitter(
                 chunk_size = 512,
