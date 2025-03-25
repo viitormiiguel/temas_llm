@@ -4,10 +4,8 @@ import sys
 import time
 import openai
 import anthropic
-
 import streamlit as st
 
-# from openai import OpenAI
 from pathlib import Path
 
 from langchain_community.chat_models import ChatOpenAI
@@ -20,7 +18,6 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_community.document_loaders import AsyncHtmlLoader
 from langchain.text_splitter import CharacterTextSplitter
-
 
 from src.runLLM import load_prompt, load_llm
 from src.parserDoc import getContentHtml, getContentAllHtml, getContentPdf
@@ -66,7 +63,7 @@ def extract_data():
         if '.pdf' in file:
         
             loader = PyPDFLoader(os.path.join('uploaded', file))
-       
+                   
             text_chunks += loader.load_and_split(text_splitter=RecursiveCharacterTextSplitter(
                 chunk_size = 512,
                 chunk_overlap = 30,
@@ -74,19 +71,22 @@ def extract_data():
                 separators= ["\n\n", "\n", ".", " "]
             ))
             
-        if '.html' in file:
-                                 
-            loader = BSHTMLLoader('uploaded/' + file)
-                                                        
-            text_chunks += loader.load_and_split(text_splitter=RecursiveCharacterTextSplitter(
-                chunk_size = 512,
-                chunk_overlap = 30,
-                length_function = len,
-                separators= ["\n\n", "\n", ".", " "]
-            ))
+        if '.html' in file:          
             
-            print(text_chunks)
-    
+            loader = getContentAllHtml('uploaded/' + file)
+                        
+            c_splitter = CharacterTextSplitter(chunk_size=450, chunk_overlap=0, separator=" ")
+            
+            r_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=450, 
+                chunk_overlap=0, 
+                separators=["\n\n", "\n", " ", ""]
+            )
+            
+            pages = c_splitter.split_text(loader)
+                        
+            text_chunks = r_splitter.create_documents(pages)
+
     vectorstore = FAISS.from_documents(documents=text_chunks, embedding=OpenAIEmbeddings())
     
     return vectorstore
