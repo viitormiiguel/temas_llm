@@ -115,11 +115,30 @@ if __name__ == '__main__':
     retRag = []
     ragString = ''
     
+    ## Section Documento
     with st.form("ragExec", clear_on_submit=True):        
         
         uploaded_file = st.file_uploader(label="Faça o Upload do seu arquivo:", accept_multiple_files=True, type=["html", "pdf"])
         
         submitted = st.form_submit_button("Salvar Documento")
+        
+    ## Section Infos Prompt
+    with st.expander("INFOS SOBRE PROMPT"):
+        
+        st.subheader("Especificação")
+        
+        st.markdown('''
+            Voce é um software especialista em assuntos juridicos, focado em analise de processos e recursos, 
+            que busca assinalar os temas STF ou STJ mais relevantes de cada processo.
+            Use os parametros abaixo para recuperar o contexto para a resposta.
+        ''')
+        
+        st.subheader("Contexto de Documento")
+
+        st.subheader("Inclusão de Temas")
+        
+        st.markdown("**50 Temas mais similares:**")
+        
         
     # Section Run LLM
     if submitted and uploaded_file != []:        
@@ -127,6 +146,7 @@ if __name__ == '__main__':
         initialize_session_state()
         
         for pdf in uploaded_file:
+            
             save_uploadedfile(pdf)
         
         ## Extrai dados e convert chunks em embeddings    
@@ -154,7 +174,7 @@ if __name__ == '__main__':
         height = 500,
     )
     
-    send_button = st.button("Enviar Pergunta")
+    send_button = st.button("Processar Documento")
 
     if question and send_button:
         
