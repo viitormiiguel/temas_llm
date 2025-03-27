@@ -182,7 +182,7 @@ if __name__ == '__main__':
             ## Printa os 50 temas mais similares
             if retRag:
                 for rr in retRag[0]:
-                    st.markdown(rr + '\n\n')
+                    st.markdown('- ' + rr + '\n\n')
     
         question = f"Com base na lista de temas do STF/STJ abaixo, analise o seguinte documento e identifique a quais temas ele mais se assemelha. Considere a relação de conteúdo, jurisprudência aplicável e palavras-chave presentes no texto. Dentre os Temas Similares abaixo, liste os Temas mais relevantes e explique brevemente o motivo da correspondência. \n\nTemas Similares: \n\n{ragString}"
         
