@@ -116,90 +116,102 @@ if __name__ == '__main__':
     ragString = ''
     
     ## Section Documento
-    with st.form("ragExec", clear_on_submit=True):        
+    with st.form("ragExec"):        
         
-        uploaded_file = st.file_uploader(label="Faça o Upload do seu arquivo:", accept_multiple_files=True, type=["html", "pdf"])
+        uploaded_file = st.file_uploader(label="Faça o Upload do arquivo (Processo ou Recurso):", accept_multiple_files=True, type=["html", "pdf"])
         
-        submitted = st.form_submit_button("Salvar Documento")
+        # submitted = st.form_submit_button("Salvar Documento")
         
-    ## Section Infos Prompt
-    with st.expander("INFOS SOBRE PROMPT"):
-        
-        st.subheader("Especificação")
-        
-        st.markdown('''
-            Voce é um software especialista em assuntos juridicos, focado em analise de processos e recursos, 
-            que busca assinalar os temas STF ou STJ mais relevantes de cada processo.
-            Use os parametros abaixo para recuperar o contexto para a resposta.
-        ''')
-        
-        st.subheader("Contexto de Documento")
+        css = r'''
+            <style>
+                [data-testid="stForm"] {border: 0px}
+            </style>
+        '''
 
-        st.subheader("Inclusão de Temas")
+        st.markdown(css, unsafe_allow_html=True)
         
-        st.markdown("**50 Temas mais similares:**")
-        
-        
-    # Section Run LLM
-    if submitted and uploaded_file != []:        
-        
-        initialize_session_state()
-        
-        for pdf in uploaded_file:
+        # Section Run LLM
+        if uploaded_file != []:
             
-            save_uploadedfile(pdf)
+            initialize_session_state()
+            
+            for pdf in uploaded_file:
+                
+                save_uploadedfile(pdf)
+            
+            ## Extrai dados e convert chunks em embeddings    
+            st.session_state.knowledge_base = extract_data()
+            
+            if '.pdf' in uploaded_file[0]:                
+                ## Get PDF Content
+                retPDF = getContentPdf('uploaded/' + uploaded_file[0].name)
+            else:
+                retPDF = getContentAllHtml('uploaded/' + uploaded_file[0].name)
+            
+            retSimi = similarityTop(retPDF, 'distiluse-base-multilingual-cased-v2')
+            
+            retRag.append(retSimi)
+            
+            for rr in retRag[0]:
+                ragString += rr + '\n\n'            
+            
+            ## Remove files from uploaded folder
+            remove_files()
         
-        ## Extrai dados e convert chunks em embeddings    
-        st.session_state.knowledge_base = extract_data()
-        
-        if '.pdf' in uploaded_file[0]:                
-            ## Get PDF Content
-            retPDF = getContentPdf('uploaded/' + uploaded_file[0].name)
-        else:
-            retPDF = getContentAllHtml('uploaded/' + uploaded_file[0].name)
-        
-        retSimi = similarityTop(retPDF, 'distiluse-base-multilingual-cased-v2')
-        
-        retRag.append(retSimi)
-        
-        for rr in retRag[0]:
-            ragString += rr + '\n\n'            
-        
-        ## Remove files from uploaded folder
-        remove_files()
-
-    question = st.text_area(
-        label = "Pergunta algo sobre o documento enviado:",
-        value = f"Com base na lista de temas do STF/STJ abaixo, analise o seguinte documento e identifique a quais temas ele mais se assemelha. Considere a relação de conteúdo, jurisprudência aplicável e palavras-chave presentes no texto. Dentre os Temas Similares abaixo, liste os Temas mais relevantes e explique brevemente o motivo da correspondência. \n\nTemas Similares: \n\n{ragString}",
-        height = 500,
-    )
+        ## Section Infos Prompt
+        with st.expander("**INFORMAÇÕES DE PROMPT**"):
+            
+            st.markdown("**Especificação**")
+            
+            st.markdown('''
+                Voce é um software especialista em assuntos juridicos, focado em analise de processos e recursos, 
+                que busca assinalar os temas STF ou STJ mais relevantes de cada processo.
+                Use os parametros abaixo para recuperar o contexto para a resposta.
+            ''')
+            
+            st.markdown("**Contexto de Documento**")
+            
+            st.markdown(''' 
+                Com base na lista de temas do STF/STJ abaixo, analise o seguinte documento e identifique a quais temas ele mais se assemelha. 
+                Considere a relação de conteúdo, jurisprudência aplicável e palavras-chave presentes no texto. 
+                Dentre os Temas Similares abaixo, liste os Temas mais relevantes e explique brevemente o motivo da correspondência. 
+            ''')
+            
+            st.markdown("**50 Temas mais Similares:**")
+            
+            ## Printa os 50 temas mais similares
+            if retRag:
+                for rr in retRag[0]:
+                    st.markdown(rr + '\n\n')
     
-    send_button = st.button("Processar Documento")
+        question = f"Com base na lista de temas do STF/STJ abaixo, analise o seguinte documento e identifique a quais temas ele mais se assemelha. Considere a relação de conteúdo, jurisprudência aplicável e palavras-chave presentes no texto. Dentre os Temas Similares abaixo, liste os Temas mais relevantes e explique brevemente o motivo da correspondência. \n\nTemas Similares: \n\n{ragString}"
+        
+        send_button = st.form_submit_button("Processar Documento")
+            
+        if send_button:
+            
+            ## Colocar string inteira do retorno dos teams
+            queryTemas = question + ragString
+            
+            try:
+                
+                similar_embeddings = st.session_state.knowledge_base.similarity_search(queryTemas)
+                similar_embeddings = FAISS.from_documents(documents=similar_embeddings, embedding=OpenAIEmbeddings())
+                
+                retriever = similar_embeddings.as_retriever()
+                rag_chain = (
+                        {"context": retriever | format_docs, "question": RunnablePassthrough()}
+                        | prompt
+                        | llm
+                        | StrOutputParser()
+                )
+            
+                response = rag_chain.invoke(queryTemas)
+                
+                ## Imprime Resposta da LLM
+                st.write(response)          
 
-    if question and send_button:
-        
-        ## Colocar string inteira do retorno dos teams
-        queryTemas = question + ragString
-        
-        try:
-            
-            similar_embeddings = st.session_state.knowledge_base.similarity_search(queryTemas)
-            similar_embeddings = FAISS.from_documents(documents=similar_embeddings, embedding=OpenAIEmbeddings())
-            
-            retriever = similar_embeddings.as_retriever()
-            rag_chain = (
-                    {"context": retriever | format_docs, "question": RunnablePassthrough()}
-                    | prompt
-                    | llm
-                    | StrOutputParser()
-            )
-        
-            response = rag_chain.invoke(queryTemas)
-            
-            ## Imprime Resposta da LLM
-            st.write(response)          
-
-        except:
-            
-            alert = st.warning("Por favor, Realize o Upload de um arquivo que deseja realizar uma pergunta.", icon="🚨")
+            except:
+                
+                alert = st.warning("Por favor, Realize o Upload de um arquivo que deseja realizar uma pergunta.", icon="🚨")
             
