@@ -148,6 +148,7 @@ if __name__ == '__main__':
             else:
                 retPDF = getContentAllHtml('uploaded/' + uploaded_file[0].name)
             
+            ## Busca 50 temas mais similares
             retSimi = similarityTop(retPDF, 'distiluse-base-multilingual-cased-v2')
             
             retRag.append(retSimi)
