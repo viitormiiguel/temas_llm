@@ -87,6 +87,45 @@ def similarityCompare(ret, modelo):
     except RuntimeError:        
         pass
 
+def similarityTopBGE(ret, modelo):    
+    
+    try:
+                
+        # 1. Load a pretrained Sentence Transformer model
+        model = SentenceTransformer(modelo)
+
+        # 2. Get the corpus
+        corpus = getCorpusSTJ()
+        
+        # 3. Compute embeddings
+        corpus_embeddings = model.encode(corpus, convert_to_tensor=True)
+        
+        # 4. Get Document 
+        queries = [ret]
+        
+        # 5. Top 50 most similar sentences in corpus
+        top_k = min(50, len(corpus))
+        
+        retorno = []        
+        for query in queries:
+        
+            query_embedding = model.encode(query, convert_to_tensor=True)
+            
+            # We use cosine-similarity and torch.topk to find the highest 5 scores
+            similarity_scores = model.similarity(query_embedding, corpus_embeddings)[0]
+            
+            scores, indices = torch.topk(similarity_scores, k=top_k)
+
+            for score, idx in zip(scores, indices):
+                # print(corpus[idx], f"(Score: {score:.4f})")
+                # retorno.append(str(corpus[idx] + ' (Score: ' + str(score) + ')'))
+                retorno.append(str(corpus[idx]))
+                
+        return retorno
+        
+    except RuntimeError:        
+        pass
+
 def similarityTop(ret, modelo):    
     
     try:

@@ -18,10 +18,14 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_community.document_loaders import AsyncHtmlLoader
 from langchain.text_splitter import CharacterTextSplitter
+from langchain.globals import set_debug, set_verbose
 
 from src.runLLM import load_prompt, load_llm
 from src.parserDoc import getContentHtml, getContentAllHtml, getContentPdf
-from src.runSimilarity import similarityCompare, similarityTop
+from src.runSimilarity import similarityCompare, similarityTop, similarityTopBGE
+
+# set_debug(True)
+# set_verbose(True)
 
 sys.path.append(str(Path(__file__).parent.parent.parent)) 
 
@@ -149,7 +153,8 @@ if __name__ == '__main__':
                 retPDF = getContentAllHtml('uploaded/' + uploaded_file[0].name)
             
             ## Busca 50 temas mais similares
-            retSimi = similarityTop(retPDF, 'distiluse-base-multilingual-cased-v2')
+            # retSimi = similarityTop(retPDF, 'distiluse-base-multilingual-cased-v2')
+            retSimi = similarityTopBGE(retPDF, 'BAAI/bge-m3')
             
             retRag.append(retSimi)
             
@@ -208,6 +213,8 @@ if __name__ == '__main__':
                 )
             
                 response = rag_chain.invoke(queryTemas)
+                
+                # pcom = chain.prompt.format(**{"context": retriever | format_docs, "question": queryTemas})
                 
                 ## Imprime Resposta da LLM
                 st.write(response)          
