@@ -20,17 +20,44 @@ from langchain_community.document_loaders import AsyncHtmlLoader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.globals import set_debug, set_verbose
 
+from typing import Any, Dict, List
+
+from langchain_core.callbacks import BaseCallbackHandler
+from langchain_core.messages import BaseMessage
+from langchain_core.outputs import LLMResult
+from langchain_core.prompts import ChatPromptTemplate
+from langchain import hub
+from langchain.agents import AgentExecutor, create_structured_chat_agent
+
 from src.runLLM import load_prompt, load_llm
 from src.parserDoc import getContentHtml, getContentAllHtml, getContentPdf
 from src.runSimilarity import similarityCompare, similarityTop, similarityTopBGE
 
 # set_debug(True)
-# set_verbose(True)
+set_verbose(True)
 
 sys.path.append(str(Path(__file__).parent.parent.parent)) 
 
 # Connect to OpenAI GPT-3, fetch API key from Streamlit secrets
 openai.api_key = os.getenv("OPENAI_API_KEY")
+
+class LoggingHandler(BaseCallbackHandler):
+    def on_chat_model_start(
+        self, serialized: Dict[str, Any], messages: List[List[BaseMessage]], **kwargs
+    ) -> None:
+        print("Chat model started")
+
+    def on_llm_end(self, response: LLMResult, **kwargs) -> None:
+        print(f"Chat model ended, response: {response}")
+
+    def on_chain_start(
+        self, serialized: Dict[str, Any], inputs: Dict[str, Any], **kwargs
+    ) -> None:
+        print(f"Chain {serialized.get('name')} started")
+
+    def on_chain_end(self, outputs: Dict[str, Any], **kwargs) -> None:
+        print(f"Chain ended, outputs: {outputs}")
+
 
 def initialize_session_state():
     
@@ -78,6 +105,8 @@ def extract_data():
         if '.html' in file:          
             
             loader = getContentAllHtml('uploaded/' + file)
+            
+            print(loader)
                         
             c_splitter = CharacterTextSplitter(chunk_size=450, chunk_overlap=0, separator=" ")
             
@@ -123,9 +152,7 @@ if __name__ == '__main__':
     with st.form("ragExec"):        
         
         uploaded_file = st.file_uploader(label="Faça o Upload do arquivo (Processo ou Recurso):", accept_multiple_files=True, type=["html", "pdf"])
-        
-        # submitted = st.form_submit_button("Salvar Documento")
-        
+                
         css = r'''
             <style>
                 [data-testid="stForm"] {border: 0px}
@@ -154,6 +181,7 @@ if __name__ == '__main__':
             
             ## Busca 50 temas mais similares
             # retSimi = similarityTop(retPDF, 'distiluse-base-multilingual-cased-v2')
+            # retSimi = similarityTop(retPDF, 'paraphrase-multilingual-mpnet-base-v2')
             retSimi = similarityTopBGE(retPDF, 'BAAI/bge-m3')
             
             retRag.append(retSimi)
@@ -190,6 +218,7 @@ if __name__ == '__main__':
                 for rr in retRag[0]:
                     st.markdown('- ' + rr + '\n\n')
     
+        ## Inicio da construção do Prompt
         question = f"Com base na lista de temas do STF/STJ abaixo, analise o seguinte documento e identifique a quais temas ele mais se assemelha. Considere a relação de conteúdo, jurisprudência aplicável e palavras-chave presentes no texto. Dentre os Temas Similares abaixo, liste os Temas mais relevantes e explique brevemente o motivo da correspondência. \n\nTemas Similares: \n\n{ragString}"
         
         send_button = st.form_submit_button("Processar Documento")
@@ -200,6 +229,8 @@ if __name__ == '__main__':
             queryTemas = question + ragString
             
             try:
+                
+                callbacks = [LoggingHandler()]
                 
                 similar_embeddings = st.session_state.knowledge_base.similarity_search(queryTemas)
                 similar_embeddings = FAISS.from_documents(documents=similar_embeddings, embedding=OpenAIEmbeddings())
@@ -213,9 +244,21 @@ if __name__ == '__main__':
                 )
             
                 response = rag_chain.invoke(queryTemas)
+                # response = rag_chain.invoke(queryTemas, config={"callbacks": callbacks})
                 
-                # pcom = chain.prompt.format(**{"context": retriever | format_docs, "question": queryTemas})
+                tools = []
                 
+                ## Agent 
+                agent = create_structured_chat_agent(
+                    llm=llm,
+                    tools=tools,
+                )
+                
+                agentExecutor = AgentExecutor(
+                    agent=agent,
+                    tools=tools   
+                )
+                                
                 ## Imprime Resposta da LLM
                 st.write(response)          
 
